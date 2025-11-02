@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Quest</title>
+  <link rel="icon" href="data:,">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+</head>
+<body>
+  <div class="bubbles">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+  </div>
+
+  <!-- Welcome Screen -->
+  <div id="welcome-screen" class="screen">
+    <div class="welcome-animation">
+      <h1>Welcome to Quiz Quest!</h1>
+    </div>
+  </div>
+
+  <!-- Login/Guest Screen -->
+  <div id="login-screen" class="screen" style="display: none;">
+    <h1>Quiz Quest</h1>
+    <div id="login-options">
+      <button onclick="showLogin()">Create Your ID</button>
+      <button onclick="showGuestForm()">Play as Guest</button>
+    </div>
+    <div id="login-form" style="display: none;">
+      <input type="text" id="login-id" placeholder="Phone/Email">
+      <input type="password" id="login-password" placeholder="Password">
+      <div class="login-buttons">
+        <button onclick="login()">Login</button>
+        <button onclick="showSignup()">Sign Up</button>
+        <button onclick="backToOptions()">Back</button>
+      </div>
+    </div>
+    <div id="signup-form" style="display: none;">
+      <button onclick="backToLogin()">Back</button>
+      <input type="text" id="signup-firstname" placeholder="First Name" required>
+      <input type="text" id="signup-lastname" placeholder="Last Name" required>
+      <input type="text" id="signup-id" placeholder="Phone or Email" required>
+      <input type="password" id="signup-password" placeholder="Password (min 8 chars)" required>
+      <button onclick="signup()" id="signup-button">Sign Up</button>
+    </div>
+    <div id="guest-form" style="display: none;">
+      <input type="text" id="guest-name" placeholder="Enter Your Name">
+      <div class="guest-buttons">
+        <button onclick="playAsGuest()">Play</button>
+        <button onclick="backToOptions()">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Avatar Selection -->
+  <div id="avatar-screen" class="screen" style="display: none;">
+    <h1>Select Your Avatar</h1>
+    <div class="avatar-grid">
+      <img src="assets/avatars/avatar1.png" onclick="selectAvatar('avatar1.png')">
+      <img src="assets/avatars/avatar2.png" onclick="selectAvatar('avatar2.png')">
+      <img src="assets/avatars/avatar3.png" onclick="selectAvatar('avatar3.png')">
+      <img src="assets/avatars/avatar4.png" onclick="selectAvatar('avatar4.png')">
+      <img src="assets/avatars/avatar5.png" onclick="selectAvatar('avatar5.png')">
+      <img src="assets/avatars/avatar6.png" onclick="selectAvatar('avatar6.png')">
+    </div>
+    <div class="avatar-buttons">
+      <button onclick="skipAvatar()">Skip</button>
+      <button onclick="nextAvatar()">Next</button>
+    </div>
+  </div>
+
+  <!-- Genre Selection -->
+  <div id="genre-screen" class="screen" style="display: none;">
+    <h1>Choose at Least 3 Genres</h1>
+    <div class="genre-grid">
+      <label><input type="checkbox" value="Nature"> Nature</label>
+      <label><input type="checkbox" value="Sports"> Sports</label>
+      <label><input type="checkbox" value="History"> History</label>
+      <label><input type="checkbox" value="Movies&TV"> Movies & TV</label>
+      <label><input type="checkbox" value="Music"> Music</label>
+      <label><input type="checkbox" value="Clg Sub"> College Subjects</label>
+      <label><input type="checkbox" value="Geography"> Geography</label>
+      <label><input type="checkbox" value="Literature"> Literature</label>
+      <label><input type="checkbox" value="Technology"> Technology</label>
+      <label><input type="checkbox" value="Video Games"> Video Games</label>
+    </div>
+    <div class="genre-buttons">
+      <button onclick="skipGenres()">Skip</button>
+      <button onclick="nextGenres()">Next</button>
+    </div>
+  </div>
+
+  <!-- Home Screen -->
+  <div id="home-screen" class="screen" style="display: none;">
+    <div class="user-info">
+      <img id="user-avatar" src="">
+      <span id="user-name"></span>
+    </div>
+    <h1>Quiz Quest</h1>
+    <div class="home-options">
+      <button onclick="hostRoom()">Host Room</button>
+      <button onclick="joinRoom()">Join Room</button>
+      <button onclick="playAlone()">Play Alone</button>
+    </div>
+  </div>
+
+  <!-- Host Room -->
+  <div id="host-room-screen" class="screen" style="display: none;">
+    <h1>Host a Room</h1>
+    <button onclick="backToHome()">Back</button>
+    <input type="text" id="room-name" placeholder="Room Name">
+    <div class="host-options">
+      <h3>Select Genres</h3>
+      <label><input type="checkbox" value="Nature"> Nature</label>
+      <label><input type="checkbox" value="Sports"> Sports</label>
+      <label><input type="checkbox" value="History"> History</label>
+      <label><input type="checkbox" value="Movies&TV"> Movies & TV</label>
+      <label><input type="checkbox" value="Music"> Music</label>
+      <label><input type="checkbox" value="Clg Sub"> College Subjects</label>
+      <label><input type="checkbox" value="Geography"> Geography</label>
+      <label><input type="checkbox" value="Literature"> Literature</label>
+      <label><input type="checkbox" value="Technology"> Technology</label>
+      <label><input type="checkbox" value="Video Games"> Video Games</label>
+      <label><input type="checkbox" value="Mixed"> Mixed Genre</label>
+      <h3>Select Level</h3>
+      <label><input type="radio" name="level" value="Easy"> Easy</label>
+      <label><input type="radio" name="level" value="Medium"> Medium</label>
+      <label><input type="radio" name="level" value="Hard"> Hard</label>
+    </div>
+    <button onclick="createRoom()">Create Room</button>
+  </div>
+
+  <!-- Join Room -->
+  <div id="join-room-screen" class="screen" style="display: none;">
+    <h1>Join a Room</h1>
+    <button onclick="backToHome()">Back</button>
+    <div id="room-list"></div>
+  </div>
+
+  <!-- Play Alone -->
+  <div id="play-alone-screen" class="screen" style="display: none;">
+    <h1>Play Alone</h1>
+    <button onclick="backToHome()">Back</button>
+    <div class="play-alone-options">
+      <button onclick="playNormal()">Play Normal</button>
+      <button onclick="playCustom()">Play with Customization</button>
+    </div>
+  </div>
+
+  <!-- Play Normal -->
+  <div id="play-normal-screen" class="screen" style="display: none;">
+    <h1>Play Normal</h1>
+    <button onclick="backToPlayAlone()">Back</button>
+    <div class="play-normal-options">
+      <h3>Select Level</h3>
+      <label><input type="radio" name="normal-level" value="Easy"> Easy</label>
+      <label><input type="radio" name="normal-level" value="Medium"> Medium</label>
+      <label><input type="radio" name="normal-level" value="Hard"> Hard</label>
+    </div>
+    <button onclick="startNormal()">Play</button>
+  </div>
+
+  <!-- Play Custom -->
+  <div id="play-custom-screen" class="screen" style="display: none;">
+    <h1>Play with Customization</h1>
+    <button onclick="backToPlayAlone()">Back</button>
+    <div class="play-custom-options">
+      <h3>Select Genres</h3>
+      <label><input type="checkbox" value="Nature"> Nature</label>
+      <label><input type="checkbox" value="Sports"> Sports</label>
+      <label><input type="checkbox" value="History"> History</label>
+      <label><input type="checkbox" value="Movies&TV"> Movies & TV</label>
+      <label><input type="checkbox" value="Music"> Music</label>
+      <label><input type="checkbox" value="Clg Sub"> College Subjects</label>
+      <label><input type="checkbox" value="Geography"> Geography</label>
+      <label><input type="checkbox" value="Literature"> Literature</label>
+      <label><input type="checkbox" value="Technology"> Technology</label>
+      <label><input type="checkbox" value="Video Games"> Video Games</label>
+      <label><input type="checkbox" value="Mixed"> Mixed Genre</label>
+      <h3>Select Level</h3>
+      <label><input type="radio" name="custom-level" value="Easy"> Easy</label>
+      <label><input type="radio" name="custom-level" value="Medium"> Medium</label>
+      <label><input type="radio" name="custom-level" value="Hard"> Hard</label>
+      <h3>Puzzle</h3>
+      <label><input type="checkbox" id="puzzle-option"> Include Puzzle</label>
+    </div>
+    <button onclick="startCustom()">Play</button>
+  </div>
+
+  <!-- Quiz Screen -->
+  <div id="quiz-screen" class="screen" style="display: none;">
+    <div class="quiz-header">
+      <div id="scores"></div>
+      <div id="timer">Time: <span id="time-left">0</span>s</div>
+      <div id="hint" onclick="useHint()">💡 Hints: <span id="hint-count">0</span></div>
+      <button id="quit-game" onclick="quitGame()">Quit Game</button>
+    </div>
+    <div id="puzzle-container" style="display: none;">
+      <img id="puzzle-image" src="">
+      <button onclick="shufflePuzzle()">Shuffle</button>
+    </div>
+    <h2 id="question">Waiting for question...</h2>
+    <div id="hint-display" class="hint-display" style="display: none;"></div>
+    <div id="options"></div>
+    <div id="timer-line" class="timer-line"></div>
+  </div>
+
+  <!-- Results Screen -->
+  <div id="results-screen" class="screen" style="display: none;">
+    <h1>Results</h1>
+    <div id="results"></div>
+    <button onclick="backToHome()">Back to Home</button>
+  </div>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    body {
+      background: linear-gradient(135deg, #FFE5F0 0%, #E6E6FA 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+    .bubbles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
+    .bubble {
+      position: absolute;
+      bottom: -100px;
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      animation: rise 10s infinite ease-in;
+    }
+    .bubble:nth-child(1) { left: 10%; animation-duration: 8s; }
+    .bubble:nth-child(2) { left: 20%; animation-duration: 12s; }
+    .bubble:nth-child(3) { left: 30%; animation-duration: 10s; }
+    .bubble:nth-child(4) { left: 40%; animation-duration: 15s; }
+    .bubble:nth-child(5) { left: 50%; animation-duration: 7s; }
+    .bubble:nth-child(6) { left: 60%; animation-duration: 11s; }
+    @keyframes rise {
+      0% { bottom: -100px; transform: translateX(0); }
+      50% { transform: translateX(50px); }
+      100% { bottom: 100vh; transform: translateX(-50px); }
+    }
+    .screen {
+      background: #FEEDD9;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+      transform: scale(0.9);
+      opacity: 0;
+      animation: fadeIn 0.5s ease forwards;
+    }
+    @keyframes fadeIn {
+      to { transform: scale(1); opacity: 1; }
+    }
+    h1 {
+      color: #333;
+      font-size: 2.5em;
+      margin-bottom: 20px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #333;
+      font-size: 1.8em;
+      margin: 20px 0;
+    }
+    h3 {
+      color: #555;
+      font-size: 1.3em;
+      margin: 15px 0;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 2px solid #E3EDE4;
+      border-radius: 10px;
+      background: #FEDADA;
+      font-size: 1em;
+    }
+    button {
+      padding: 12px 24px;
+      margin: 10px;
+      border: none;
+      border-radius: 10px;
+      background: #E3EDE4;
+      color: #333;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background: #E0D6EE;
+      transform: scale(1.05);
+    }
+    .welcome-animation {
+      position: relative;
+      animation: slideIn 1s ease;
+    }
+    @keyframes slideIn {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .login-options, .home-options, .play-alone-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .avatar-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .avatar-grid img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px solid #E3EDE4;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+    .avatar-grid img:hover {
+      transform: scale(1.1);
+    }
+    .genre-grid, .host-options, .play-custom-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+    }
+    .genre-grid label, .host-options label, .play-custom-options label {
+      background: #FEDADA;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .genre-grid label:hover, .host-options label:hover, .play-custom-options label:hover {
+      background: #E0D6EE;
+    }
+    .user-info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .user-info img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid #E3EDE4;
+    }
+    .quiz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    #scores {
+      flex: 1;
+      text-align: left;
+    }
+    #timer, #hint {
+      font-size: 1.2em;
+      color: #333;
+    }
+    #hint {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    #options button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+    }
+    .correct {
+      background: #28a745 !important;
+      color: white !important;
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+      transition: all 0.3s ease;
+    }
+    .incorrect {
+      background: #dc3545 !important;
+      color: white !important;
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+      transition: all 0.3s ease;
+    }
+    #puzzle-container {
+      margin: 20px 0;
+    }
+    #puzzle-image {
+      width: 200px;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+    #results .winner {
+      font-size: 2em;
+      color: #28a745;
+      margin: 10px 0;
+    }
+    #results .runner {
+      font-size: 1.5em;
+      color: #17a2b8;
+      margin: 10px 0;
+    }
+    #room-list div {
+      background: #FEDADA;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #room-list div:hover {
+      background: #E0D6EE;
+    }
+    #hint-display {
+      background-color: #f8f9fa;
+      border: 2px solid #E0D6EE;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 20px 0;
+      font-style: italic;
+      color: #6c757d;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+    #hint-display.show {
+      display: block;
+      animation: fadeIn 0.5s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    #timer-line {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #FF6B6B 0%, #4ECDC4 100%);
+      width: 100%;
+      transition: width 1s linear;
+    }
+    #quit-game {
+      background: #dc3545;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #quit-game:hover {
+      background: #c82333;
+    }
+    .login-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .login-buttons button {
+      flex: 1;
+      max-width: 120px;
+    }
+    .guest-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .guest-buttons button {
+      flex: 1;
+      max-width: 120px;
+    }
+  </style>
+
+  <script>
+    const socket = io('http://localhost:3005');
+    let user = { id: null, name: '', avatar: '', genres: [], isGuest: false };
+    let currentRoom = null;
+    let hintsLeft = 0;
+    let timePerQuestion = 0;
+    let puzzleActive = false;
+    let puzzleShuffles = 0;
+    let currentQuestionId = null;
+    let playerSocketId = socket.id;
+    let hasAnswered = false;
+    const correctSound = new Audio('assets/sounds/correct.mp3');
+    const incorrectSound = new Audio('assets/sounds/incorrect.mp3');
+    const puzzles = [
+      'puzzle1.jpg', 'puzzle2.jpg', 'puzzle3.jpg',
+      'puzzle4.jpg', 'puzzle5.jpg', 'puzzle6.jpg'
+    ];
+    let currentPuzzle = '';
+
+    // Welcome Animation
+    setTimeout(() => {
+      document.getElementById('welcome-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'block';
+    }, 3000);
+
+    function showLogin() {
+      document.getElementById('login-options').style.display = 'none';
+      document.getElementById('login-form').style.display = 'block';
+      document.getElementById('signup-form').style.display = 'none';
+    }
+
+    function backToOptions() {
+      document.getElementById('login-form').style.display = 'none';
+      document.getElementById('signup-form').style.display = 'none';
+      document.getElementById('guest-form').style.display = 'none';
+      document.getElementById('login-options').style.display = 'block';
+    }
+
+    function showSignup() {
+      document.getElementById('login-form').style.display = 'none';
+      document.getElementById('signup-form').style.display = 'block';
+      // Clear any previous values
+      document.getElementById('signup-firstname').value = '';
+      document.getElementById('signup-lastname').value = '';
+      document.getElementById('signup-id').value = '';
+      document.getElementById('signup-password').value = '';
+    }
+
+    function backToLogin() {
+      document.getElementById('signup-form').style.display = 'none';
+      document.getElementById('login-form').style.display = 'block';
+    }
+
+    function login() {
+      const id = document.getElementById('login-id').value;
+      const password = document.getElementById('login-password').value;
+      if (!id || !password) {
+        alert('Please fill in all fields');
+        return;
+      }
+      socket.emit('login', { id, password });
+    }
+
+    function signup() {
+      const firstname = document.getElementById('signup-firstname').value.trim();
+      const lastname = document.getElementById('signup-lastname').value.trim();
+      const id = document.getElementById('signup-id').value.trim();
+      const password = document.getElementById('signup-password').value;
+
+      if (!firstname || !lastname || !id || !password) {
+        alert('Please fill in all fields');
+        return;
+      }
+      if (password.length < 8) {
+        alert('Password must be at least 8 characters');
+        return;
+      }
+
+      // Disable the signup button to prevent multiple submissions
+      const signupButton = document.getElementById('signup-button');
+      signupButton.disabled = true;
+      signupButton.textContent = 'Signing up...';
+
+      // Add timeout to re-enable button if no response
+      const timeoutId = setTimeout(() => {
+        signupButton.disabled = false;
+        signupButton.textContent = 'Sign Up';
+        alert('Signup timed out. Please try again.');
+      }, 5000);
+
+      socket.emit('signup', { firstname, lastname, id, password });
+
+      // Listen for response
+      socket.once('auth-success', () => {
+        clearTimeout(timeoutId);
+      });
+
+      socket.once('auth-error', () => {
+        clearTimeout(timeoutId);
+        signupButton.disabled = false;
+        signupButton.textContent = 'Sign Up';
+      });
+    }
+
+    function showGuestForm() {
+      document.getElementById('login-options').style.display = 'none';
+      document.getElementById('guest-form').style.display = 'block';
+      document.getElementById('guest-name').value = '';
+    }
+
+    function playAsGuest() {
+      const guestName = document.getElementById('guest-name').value.trim();
+      if (!guestName) {
+        alert('Please enter your name');
+        return;
+      }
+      socket.emit('guest', { name: guestName });
+    }
+
+    function forgotPassword() {
+      alert('Password reset not implemented. Contact support.');
+    }
+
+    socket.on('auth-success', (data) => {
+      user = { ...data.user, isGuest: data.isGuest };
+      if (!user.name && user.firstname && user.lastname) {
+        user.name = `${user.firstname} ${user.lastname}`;
+      }
+      document.getElementById('login-screen').style.display = 'none';
+      
+      if (data.skipAvatar) {
+        document.getElementById('home-screen').style.display = 'block';
+        document.getElementById('user-name').textContent = user.name || 'Guest';
+        document.getElementById('user-avatar').src = user.avatar ? `assets/avatars/${user.avatar}` : 'assets/avatars/default.png';
+      } else {
+        document.getElementById('avatar-screen').style.display = 'block';
+      }
+    });
+
+    socket.on('auth-error', (data) => {
+      console.log('Auth error:', data.message);
+      alert(data.message);
+      const signupButton = document.getElementById('signup-button');
+      if (signupButton) {
+        signupButton.disabled = false;
+        signupButton.textContent = 'Sign Up';
+      }
+      if (data.message.includes('No questions available')) {
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('home-screen').style.display = 'block';
+        currentRoom = null;
+        socket.emit('leave-room');
+      }
+    });
+
+    function selectAvatar(avatar) {
+      user.avatar = avatar;
+      document.querySelectorAll('.avatar-grid img').forEach(img => {
+        img.style.borderColor = img.src.includes(avatar) ? '#E0D6EE' : '#E3EDE4';
+      });
+    }
+
+    function skipAvatar() {
+      user.avatar = '';
+      nextAvatar();
+    }
+
+    function nextAvatar() {
+      document.getElementById('avatar-screen').style.display = 'none';
+      document.getElementById('genre-screen').style.display = 'block';
+    }
+
+    function skipGenres() {
+      user.genres = [];
+      nextGenres();
+    }
+
+    function nextGenres() {
+      const genres = Array.from(document.querySelectorAll('.genre-grid input:checked')).map(input => input.value);
+      if (genres.length < 3 && genres.length > 0) {
+        alert('Please select at least 3 genres or skip');
+        return;
+      }
+      user.genres = genres;
+      socket.emit('update-user', user);
+      document.getElementById('genre-screen').style.display = 'none';
+      document.getElementById('home-screen').style.display = 'block';
+      document.getElementById('user-name').textContent = user.name || 'Guest';
+      document.getElementById('user-avatar').src = user.avatar ? `assets/avatars/${user.avatar}` : 'assets/avatars/default.png';
+    }
+
+    function hostRoom() {
+      document.getElementById('home-screen').style.display = 'none';
+      document.getElementById('host-room-screen').style.display = 'block';
+    }
+
+    function createRoom() {
+      const name = document.getElementById('room-name').value;
+      const genres = Array.from(document.querySelectorAll('.host-options input[type="checkbox"]:checked')).map(input => input.value);
+      const level = document.querySelector('.host-options input[type="radio"]:checked')?.value;
+      if (!name || genres.length === 0 || !level) {
+        alert('Please fill all fields');
+        return;
+      }
+      socket.emit('create-room', { name, genres, level });
+    }
+
+    function joinRoom() {
+      document.getElementById('home-screen').style.display = 'none';
+      document.getElementById('join-room-screen').style.display = 'block';
+      socket.emit('get-rooms');
+    }
+
+    socket.on('room-list', (rooms) => {
+      const roomList = document.getElementById('room-list');
+      roomList.innerHTML = '';
+      rooms.forEach(room => {
+        const div = document.createElement('div');
+        div.textContent = `${room.name} (${room.players.length}/5)`;
+        div.onclick = () => socket.emit('join-room', room.id);
+        roomList.appendChild(div);
+      });
+    });
+
+    function playAlone() {
+      document.getElementById('home-screen').style.display = 'none';
+      document.getElementById('play-alone-screen').style.display = 'block';
+    }
+
+    function backToHome() {
+      // Hide all screens
+      document.querySelectorAll('.screen').forEach(screen => {
+        screen.style.display = 'none';
+      });
+      
+      // Clear the results content
+      document.getElementById('results').innerHTML = '';
+      
+      // Ensure results screen is hidden
+      document.getElementById('results-screen').style.display = 'none';
+      
+      // Show home screen
+      document.getElementById('home-screen').style.display = 'block';
+      
+      // Reset room state
+      currentRoom = null;
+      socket.emit('leave-room');
+    }
+
+    function playNormal() {
+      document.getElementById('play-alone-screen').style.display = 'none';
+      document.getElementById('play-normal-screen').style.display = 'block';
+    }
+
+    function backToPlayAlone() {
+      document.getElementById('play-normal-screen').style.display = 'none';
+      document.getElementById('play-custom-screen').style.display = 'none';
+      document.getElementById('play-alone-screen').style.display = 'block';
+    }
+
+    function playCustom() {
+      document.getElementById('play-alone-screen').style.display = 'none';
+      document.getElementById('play-custom-screen').style.display = 'block';
+    }
+
+    function startNormal() {
+      const level = document.querySelector('input[name="normal-level"]:checked')?.value;
+      if (!level) {
+        alert('Please select a level');
+        return;
+      }
+      currentRoom = { id: socket.id };
+      socket.emit('start-normal', { level, genres: user.genres });
+    }
+
+    function startCustom() {
+      const genres = Array.from(document.querySelectorAll('.play-custom-options input[type="checkbox"]:checked')).map(input => input.value);
+      const level = document.querySelector('input[name="custom-level"]:checked')?.value;
+      const puzzle = document.getElementById('puzzle-option').checked;
+      if (genres.length === 0 || !level) {
+        alert('Please fill all fields');
+        return;
+      }
+      currentRoom = { id: socket.id };
+      socket.emit('start-custom', { genres, level, puzzle });
+    }
+
+    socket.on('room-joined', (room) => {
+      currentRoom = room;
+      document.getElementById('join-room-screen').style.display = 'none';
+      document.getElementById('host-room-screen').style.display = 'none';
+      document.getElementById('quiz-screen').style.display = 'block';
+      document.getElementById('options').innerHTML = '';
+      document.getElementById('question').textContent = 'Waiting for host to start...';
+      
+      // Remove any existing start button
+      const existingButton = document.getElementById('start-game-button');
+      if (existingButton) existingButton.remove();
+      
+      // Add start button only for host
+      if (room.host === socket.id) {
+        const startButton = document.createElement('button');
+        startButton.textContent = 'Start Game';
+        startButton.id = 'start-game-button';
+        startButton.onclick = () => {
+          socket.emit('start-room', room.id);
+          startButton.remove();
+        };
+        document.getElementById('quiz-screen').appendChild(startButton);
+      }
+      
+      // Initialize scores display
+      updateScores(room.players);
+    });
+
+    function updateScores(players) {
+      const scoresDiv = document.getElementById('scores');
+      scoresDiv.innerHTML = '';
+      
+      // For play alone mode, only show the current player's score
+      if (currentRoom && currentRoom.id === socket.id) {
+        const player = players.find(p => p.id === socket.id);
+        if (player) {
+          const div = document.createElement('div');
+          div.textContent = `${player.user.name}: 0`;
+          scoresDiv.appendChild(div);
+        }
+      } else {
+        // For multiplayer rooms, show all players
+        players.forEach(player => {
+          const div = document.createElement('div');
+          div.textContent = `${player.user.name}: 0`;
+          scoresDiv.appendChild(div);
+        });
+      }
+    }
+
+    socket.on('quiz-start', (data) => {
+      hintsLeft = data.isMultiplayer ? 3 : 2;
+      timePerQuestion = data.timePerQuestion;
+      puzzleActive = data.puzzle;
+      puzzleShuffles = 0;
+      currentQuestionId = null;
+      hasAnswered = false;
+      document.getElementById('hint-count').textContent = hintsLeft;
+      document.getElementById('quiz-screen').style.display = 'block';
+      document.getElementById('play-normal-screen').style.display = 'none';
+      document.getElementById('play-custom-screen').style.display = 'none';
+      document.getElementById('options').innerHTML = '';
+      
+      if (puzzleActive) {
+        currentPuzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
+        document.getElementById('puzzle-container').style.display = 'block';
+        document.getElementById('puzzle-image').src = `assets/puzzles/${currentPuzzle}`;
+      }
+    });
+
+    socket.on('question', (data) => {
+      currentQuestionId = data.questionId;
+      hasAnswered = false;
+      document.getElementById('question').textContent = data.question || 'No question received';
+      document.getElementById('hint-display').style.display = 'none';
+      document.getElementById('hint-display').classList.remove('show');
+      const options = document.getElementById('options');
+      options.innerHTML = '';
+      
+      if (data.options && Array.isArray(data.options)) {
+        data.options.forEach((option, index) => {
+          const button = document.createElement('button');
+          button.textContent = option;
+          button.onclick = () => answerQuestion(index, data.questionId, button);
+          button.disabled = false;
+          button.style.cursor = 'pointer';
+          button.style.pointerEvents = 'auto';
+          button.classList.remove('correct', 'incorrect');
+          button.dataset.playerId = playerSocketId;
+          options.appendChild(button);
+        });
+      } else {
+        document.getElementById('options').innerHTML = '<p>No options available</p>';
+      }
+      startTimer(data.time);
+    });
+
+    function startTimer(seconds) {
+      const timeLeft = document.getElementById('time-left');
+      const timerLine = document.getElementById('timer-line');
+      
+      // Clear any existing timer
+      if (window.timerInterval) {
+        clearInterval(window.timerInterval);
+      }
+      
+      timeLeft.textContent = seconds;
+      timerLine.style.width = '100%';
+      
+      window.timerInterval = setInterval(() => {
+        seconds--;
+        timeLeft.textContent = seconds;
+        timerLine.style.width = `${(seconds / timePerQuestion) * 100}%`;
+        
+        if (seconds <= 0) {
+          clearInterval(window.timerInterval);
+          timerLine.style.width = '0%';
+        }
+      }, 1000);
+    }
+
+    function answerQuestion(index, questionId, button) {
+      if (!currentRoom || !currentRoom.id) {
+        console.error('Cannot send answer: currentRoom is not defined');
+        alert('Error: Room not initialized. Please restart the quiz.');
+        return;
+      }
+      if (questionId !== currentQuestionId) {
+        console.log('Ignoring answer for outdated question ID:', questionId, 'Current:', currentQuestionId);
+        return;
+      }
+      if (hasAnswered) {
+        console.log('Player has already answered this question');
+        return;
+      }
+      
+      hasAnswered = true;
+      button.onclick = null; // Remove the onclick event to prevent multiple clicks
+      socket.emit('answer', { answer: index, roomId: currentRoom.id, questionId });
+    }
+
+    socket.on('answer-result', (data) => {
+      if (data.questionId !== currentQuestionId) {
+        console.log('Ignoring answer-result for outdated question');
+        return;
+      }
+      
+      const buttons = document.querySelectorAll('#options button');
+      buttons.forEach((btn, idx) => {
+        if (idx === data.correctAnswer) {
+          btn.classList.add('correct');
+        }
+        if (idx === data.answer) {
+          btn.classList.add(data.correct ? 'correct' : 'incorrect');
+        }
+        btn.disabled = true;
+        btn.style.cursor = 'not-allowed';
+        btn.style.pointerEvents = 'none';
+      });
+      
+      // Play sound based on answer correctness
+      if (data.correct) {
+        correctSound.currentTime = 0; // Reset sound to start
+        correctSound.play();
+      } else {
+        incorrectSound.currentTime = 0; // Reset sound to start
+        incorrectSound.play();
+      }
+    });
+
+    socket.on('scores', (scores) => {
+      const scoresDiv = document.getElementById('scores');
+      scoresDiv.innerHTML = '';
+      
+      // For play alone mode, only show the current player's score
+      if (currentRoom && currentRoom.id === socket.id) {
+        const playerScore = scores.find(([name]) => name === user.name);
+        if (playerScore) {
+          const div = document.createElement('div');
+          div.textContent = `${playerScore[0]}: ${playerScore[1]}`;
+          scoresDiv.appendChild(div);
+        }
+      } else {
+        // For multiplayer rooms, show all players
+        scores.forEach(([name, score]) => {
+          const div = document.createElement('div');
+          div.textContent = `${name}: ${score}`;
+          scoresDiv.appendChild(div);
+        });
+      }
+    });
+
+    function useHint() {
+      if (!currentRoom || !currentRoom.id) {
+        console.error('Cannot use hint: currentRoom is not defined');
+        return;
+      }
+      socket.emit('use-hint', { roomId: currentRoom.id, questionId: currentQuestionId });
+    }
+
+    socket.on('hint-result', (data) => {
+      if (data.questionId && data.questionId !== currentQuestionId) {
+        console.log('Ignoring hint-result for outdated question ID:', data.questionId, 'Current:', currentQuestionId);
+        return;
+      }
+      if (data.success) {
+        hintsLeft = data.hintsLeft;
+        timePerQuestion = data.timePerQuestion || timePerQuestion;
+        document.getElementById('hint-count').textContent = hintsLeft;
+        const hintDisplay = document.getElementById('hint-display');
+        hintDisplay.textContent = data.hint;
+        hintDisplay.style.display = 'block';
+        hintDisplay.classList.add('show');
+      } else if (data.cost) {
+        if (confirm(`Your time will decrease by ${data.cost} seconds. Continue?`)) {
+          socket.emit('use-cost-hint', { roomId: currentRoom.id, questionId: currentQuestionId });
+        }
+      } else {
+        alert('No hints left!');
+      }
+    });
+
+    function shufflePuzzle() {
+      puzzleShuffles++;
+      if (puzzleShuffles >= 6) {
+        document.getElementById('puzzle-image').src = `assets/puzzles/${currentPuzzle.replace('.jpg', '_solved.jpg')}`;
+      }
+      document.getElementById('puzzle-container').style.pointerEvents = 'none';
+    }
+
+    socket.on('results', (data) => {
+      // Only show results if we're not already on the results screen
+      if (document.getElementById('results-screen').style.display === 'none') {
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('results-screen').style.display = 'block';
+        const results = document.getElementById('results');
+        results.innerHTML = '';
+        
+        if (data.winner) {
+          const winner = document.createElement('div');
+          winner.className = 'winner';
+          winner.textContent = `Winner: ${data.winner.name} (${data.winner.score})`;
+          results.appendChild(winner);
+          
+          if (data.runner) {
+            const runner = document.createElement('div');
+            runner.className = 'runner';
+            runner.textContent = `Runner: ${data.runner.name} (${data.runner.score})`;
+            results.appendChild(runner);
+          }
+          
+          if (data.others && data.others.length > 0) {
+            data.others.forEach(player => {
+              const div = document.createElement('div');
+              div.textContent = `${player.name}: ${player.score}`;
+              results.appendChild(div);
+            });
+          }
+        } else {
+          const score = document.createElement('div');
+          score.className = 'winner';
+          score.textContent = `${data.name}: ${data.score}`;
+          results.appendChild(score);
+        }
+      }
+    });
+
+    socket.on('player-left', (data) => {
+      const scoresDiv = document.getElementById('scores');
+      const playerDiv = Array.from(scoresDiv.children).find(div => div.textContent.includes(data.playerName));
+      if (playerDiv) {
+        playerDiv.textContent = `${data.playerName} (left the game)`;
+        playerDiv.style.color = '#dc3545';
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
+
+    function quitGame() {
+      if (confirm('Are you sure you want to quit the game?')) {
+        socket.emit('leave-room');
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('home-screen').style.display = 'block';
+        currentRoom = null;
+      }
+    }
+  </script>
+</body>
+</html>
