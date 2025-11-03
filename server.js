@@ -6,13 +6,49 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+
+// Configure CORS for production
+// Since we serve static files from the same server, allow all origins
+// In production on Render, this will allow connections from your Render URL
+const io = new Server(server, { 
+  cors: { 
+    origin: '*', // Allow all origins (you can restrict this if needed)
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  transports: ['websocket', 'polling']
+});
 
 app.use(express.static('client'));
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// MongoDB connection with better error handling
+const mongoUri = process.env.MONGO_URI;
+if (!mongoUri) {
+  console.error('MONGO_URI is not defined in environment variables');
+  process.exit(1);
+}
+
+mongoose.connect(mongoUri, {
+  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+  socketTimeoutMS: 45000,
+  maxPoolSize: 10,
+  retryWrites: true
+})
+  .then(() => {
+    console.log('Connected to MongoDB successfully');
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err.message);
+    if (err.message.includes('authentication failed')) {
+      console.error('\n⚠️  MongoDB Authentication Error:');
+      console.error('Please check your MongoDB credentials:');
+      console.error('1. Verify your username and password are correct');
+      console.error('2. Make sure special characters in password are URL-encoded (e.g., @ becomes %40)');
+      console.error('3. Check that your MongoDB Atlas IP whitelist includes your current IP');
+      console.error('4. Verify the database user has proper permissions');
+    }
+    // Don't exit - allow server to start but operations will fail gracefully
+  });
 
 const userSchema = new mongoose.Schema({
   firstname: String,
@@ -23,6 +59,24 @@ const userSchema = new mongoose.Schema({
   genres: [String],
 });
 const User = mongoose.model('User', userSchema);
+
+// Helper function to check MongoDB connection
+function isMongoConnected() {
+  return mongoose.connection.readyState === 1;
+}
+
+// Handle MongoDB connection events
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connection established');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('MongoDB disconnected');
+});
 
 const questions = [
   { genre: 'Nature', question: 'What is the largest mammal?', options: ['Blue Whale', 'Elephant', 'Giraffe', 'Lion'], correct: 0, level: 'Easy', hint: 'This animal lives in the ocean and can grow up to 100 feet long.' },
@@ -63,42 +117,60 @@ io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
   socket.on('login', async ({ id, password }) => {
-    const user = await User.findOne({ id, password });
-    if (user) {
-      const userData = {
-        id: user.id,
-        firstname: user.firstname,
-        lastname: user.lastname,
-        name: `${user.firstname} ${user.lastname}`,
-        avatar: user.avatar || '',
-        genres: user.genres || [],
-        isGuest: false
-      };
-      socket.user = userData;
-      socket.emit('auth-success', { user: userData, isGuest: false, skipAvatar: true });
-    } else {
-      socket.emit('auth-error', { message: 'Invalid credentials' });
+    if (!isMongoConnected()) {
+      socket.emit('auth-error', { message: 'Database connection failed. Please try again later.' });
+      return;
+    }
+    try {
+      const user = await User.findOne({ id, password });
+      if (user) {
+        const userData = {
+          id: user.id,
+          firstname: user.firstname,
+          lastname: user.lastname,
+          name: `${user.firstname} ${user.lastname}`,
+          avatar: user.avatar || '',
+          genres: user.genres || [],
+          isGuest: false
+        };
+        socket.user = userData;
+        socket.emit('auth-success', { user: userData, isGuest: false, skipAvatar: true });
+      } else {
+        socket.emit('auth-error', { message: 'Invalid credentials' });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      socket.emit('auth-error', { message: 'Database error. Please try again later.' });
     }
   });
 
   socket.on('signup', async ({ firstname, lastname, id, password }) => {
-    const existingUser = await User.findOne({ id });
-    if (existingUser) {
-      socket.emit('auth-error', { message: 'User already exists' });
-    } else {
-      const user = new User({ firstname, lastname, id, password, avatar: '', genres: [] });
-      await user.save();
-      const userData = {
-        id: user.id,
-        firstname: user.firstname,
-        lastname: user.lastname,
-        name: `${user.firstname} ${user.lastname}`,
-        avatar: user.avatar,
-        genres: user.genres,
-        isGuest: false
-      };
-      socket.user = userData;
-      socket.emit('auth-success', { user: userData, isGuest: false, skipAvatar: false });
+    if (!isMongoConnected()) {
+      socket.emit('auth-error', { message: 'Database connection failed. Please try again later.' });
+      return;
+    }
+    try {
+      const existingUser = await User.findOne({ id });
+      if (existingUser) {
+        socket.emit('auth-error', { message: 'User already exists' });
+      } else {
+        const user = new User({ firstname, lastname, id, password, avatar: '', genres: [] });
+        await user.save();
+        const userData = {
+          id: user.id,
+          firstname: user.firstname,
+          lastname: user.lastname,
+          name: `${user.firstname} ${user.lastname}`,
+          avatar: user.avatar,
+          genres: user.genres,
+          isGuest: false
+        };
+        socket.user = userData;
+        socket.emit('auth-success', { user: userData, isGuest: false, skipAvatar: false });
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      socket.emit('auth-error', { message: 'Database error. Please try again later.' });
     }
   });
 
@@ -117,21 +189,29 @@ io.on('connection', (socket) => {
 
   socket.on('update-user', async (userData) => {
     if (!socket.user.isGuest) {
-      await User.updateOne(
-        { id: socket.user.id },
-        { 
+      if (!isMongoConnected()) {
+        console.warn('Cannot update user: MongoDB not connected');
+        return;
+      }
+      try {
+        await User.updateOne(
+          { id: socket.user.id },
+          { 
+            avatar: userData.avatar,
+            genres: userData.genres,
+            firstname: userData.firstname,
+            lastname: userData.lastname
+          }
+        );
+        socket.user = {
+          ...socket.user,
           avatar: userData.avatar,
           genres: userData.genres,
-          firstname: userData.firstname,
-          lastname: userData.lastname
-        }
-      );
-      socket.user = {
-        ...socket.user,
-        avatar: userData.avatar,
-        genres: userData.genres,
-        name: `${userData.firstname} ${userData.lastname}`
-      };
+          name: `${userData.firstname} ${userData.lastname}`
+        };
+      } catch (error) {
+        console.error('Update user error:', error);
+      }
     } else {
       socket.user = {
         ...socket.user,
@@ -460,6 +540,11 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(3005, () => {
-  console.log('Server running on http://localhost:3005/');
+const PORT = process.env.PORT || 3005;
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`Local: http://localhost:${PORT}/`);
+  }
 });

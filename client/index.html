@@ -506,7 +506,14 @@
   </style>
 
   <script>
-    const socket = io('http://localhost:3005');
+    // Auto-detect server URL for local and production
+    const serverUrl = window.location.origin;
+    const socket = io(serverUrl, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5
+    });
     let user = { id: null, name: '', avatar: '', genres: [], isGuest: false };
     let currentRoom = null;
     let hintsLeft = 0;
