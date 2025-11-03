@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
+const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
 
 const app = express();
@@ -22,11 +23,55 @@ const io = new Server(server, {
 app.use(express.static('client'));
 
 // MongoDB connection with better error handling
-const mongoUri = process.env.MONGO_URI;
+const DB_PATH = 'mongodb+srv://mdateeq807_db_user:<mdateeq807_db_user>@cluster0.my6abgj.mongodb.net/?appName=Cluster0';
+const mongoUri = process.env.MONGO_URI || DB_PATH;
 if (!mongoUri) {
   console.error('MONGO_URI is not defined in environment variables');
   process.exit(1);
 }
+
+// Optional: Native driver ping to validate credentials before using Mongoose
+(async () => {
+  // Preflight validation and safe logging
+  try {
+    const uriStr = String(mongoUri || '');
+    if (uriStr.includes('<') || uriStr.includes('>')) {
+      console.error('Mongo URI appears to contain placeholders like <...>. Please replace with your actual, URL-encoded password.');
+    }
+    const schemeIdx = uriStr.indexOf('://');
+    const authStart = schemeIdx >= 0 ? schemeIdx + 3 : -1;
+    const atIndex = uriStr.indexOf('@', authStart + 1);
+    if (authStart > 0 && atIndex > authStart) {
+      const authPart = uriStr.slice(authStart, atIndex); // username:password
+      const [userPart, passPart = ''] = authPart.split(':');
+      const hostAndPath = uriStr.slice(atIndex + 1);
+      const host = hostAndPath.split('/')[0];
+      const looksUnencoded = /[\s#&/?:%]/.test(passPart);
+      console.log(`Mongo URI check → user: ${userPart || '(missing)'} host: ${host || '(missing)'} passwordSet: ${passPart ? 'yes' : 'no'} encodedLikely: ${looksUnencoded ? 'no' : 'yes'}`);
+      if (!passPart) {
+        console.error('Mongo URI has no password segment after username:. Add your URL-encoded password.');
+      } else if (looksUnencoded) {
+        console.error('Mongo URI password likely not URL-encoded. Encode it (e.g., @ → %40, # → %23).');
+      }
+    }
+  } catch (_) {}
+  try {
+    const testClient = new MongoClient(mongoUri, {
+      serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+      },
+    });
+    await testClient.connect();
+    await testClient.db('admin').command({ ping: 1 });
+    console.log('MongoDB ping succeeded. Credentials are valid.');
+    await testClient.close();
+  } catch (e) {
+    console.error('MongoDB ping failed:', e.message);
+  }
+})();
+
 
 mongoose.connect(mongoUri, {
   serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
